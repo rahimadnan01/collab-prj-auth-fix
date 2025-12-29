@@ -1,8 +1,7 @@
 import { User } from "../models/User.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { generateToken } from "../utils/generateTokens.js";
-
+import { generateAccessAndRefreshToken } from "../utils/generateTokens.js";
 export const signup = async (req, res, next) => {
   try {
     const { name, email, password, confirmPassword, role } = req.body;
@@ -27,20 +26,29 @@ export const signup = async (req, res, next) => {
       role,
     });
 
-    const token = generateToken(user);
-
-    res.status(201).json(
-      new ApiResponse(201, {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
-        token,
-      }, "Account created successfully")
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+      user._id
     );
 
+    if (!accessToken || !refreshToken) {
+      throw new ApiError(500, "failed to create Tokens");
+    }
+
+    const options = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+    };
+
+    res
+      .status(201)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new ApiResponse(200, "User Registered successfully", {
+          user,
+        })
+      );
   } catch (error) {
     next(error);
   }
@@ -64,20 +72,31 @@ export const login = async (req, res, next) => {
       throw new ApiError(401, "Invalid credentials");
     }
 
-    const token = generateToken(user);
-
-    res.status(200).json(
-      new ApiResponse(200, {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
-        token,
-      }, "Login successful")
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+      user._id
     );
 
+    if (!accessToken || !refreshToken) {
+      throw new ApiError(500, "failed to create Tokens");
+    }
+
+    const options = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+    };
+
+    res
+      .status(201)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new ApiResponse(200, "User Registered successfully", {
+          user: user,
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+        })
+      );
   } catch (error) {
     next(error);
   }
