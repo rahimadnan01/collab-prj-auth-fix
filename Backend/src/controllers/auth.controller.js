@@ -101,3 +101,22 @@ export const login = async (req, res, next) => {
     next(error);
   }
 };
+
+export const logout = async (req, res) => {
+  const loggedOutUser = await User.findByIdAndUpdate(req.user._id, {
+    $unset: {
+      refreshToken: 1,
+    },
+  });
+
+  let options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  res
+    .status(201)
+    .clearCookie("refreshToken", options)
+    .clearCookie("accessToken", options)
+    .json(new ApiResponse(200, "User logged out Successfully"));
+};
