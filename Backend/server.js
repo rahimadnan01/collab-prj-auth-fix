@@ -1,0 +1,19 @@
+import app from "./src/app.js";
+import { connectDB } from "./src/config/db.js";
+import { env } from "./src/config/env.js";
+
+const startServer = async () => {
+  await connectDB();
+
+  const server = app.listen(env.PORT, () => {
+    console.log(`🚀 Server running on port ${env.PORT}`);
+  });
+
+  /* Graceful shutdown */
+  process.on("SIGINT", () => {
+    console.log("🛑 Server shutting down");
+    server.close(() => process.exit(0));
+  });
+};
+
+startServer();
